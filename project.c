@@ -84,23 +84,28 @@ int main() {
     // Inform players of who goes first
     printf("%s goes first!\n", (turn == 0) ? player1.name : player2.name);
 
-    // Ship placement for the first player
-    Player *currentPlayer = (turn == 0) ? &player1 : &player2;
-    printf("%s, place your ships:\n", currentPlayer->name);
-    for (int i = 0; i < MAX_SHIPS; i++) {
-        char orientation;
-        char coordinate[3];
-        displayGrid((turn == 0) ? &player2 : &player1, currentPlayer, 1, 1); // Show opponent's grid
-        if(currentPlayer->ships[i].size!=0){// Sara: added an if statment for the (size 0)
+   // Ship placement for the first player
+Player *currentPlayer = (turn == 0) ? &player1 : &player2;
+printf("%s, place your ships:\n", currentPlayer->name);
+for (int i = 0; i < MAX_SHIPS; i++) {
+    char orientation;
+    char coordinate[3];
+    displayGrid((turn == 0) ? &player2 : &player1, currentPlayer, 1, 1); // Show opponent's grid
+    if(currentPlayer->ships[i].size != 0){  // Check that the ship size is not 0
+        do {
             printf("Place %s (size %d): Enter coordinate (e.g., B3) and orientation (h/v): ", currentPlayer->ships[i].name, currentPlayer->ships[i].size);
             scanf("%s %c", coordinate, &orientation);
+            if (orientation != 'h' && orientation != 'v') {
+                printf("Invalid orientation. Please enter 'h' for horizontal or 'v' for vertical.\n");
+            }
+        } while (orientation != 'h' && orientation != 'v');  // Loop until a valid orientation is entered
 
-        }
         if (placeShip(currentPlayer, i, coordinate, orientation) == 0) {
             i--; // Repeat for invalid placement
         }
         clearScreen(); // Clear screen after each ship placement
     }
+}
 
     // Clear screen after Player 1 finishes placing ships
     clearScreen();
