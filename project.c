@@ -202,26 +202,33 @@ void displayGrid(Player *player, Player *opponent, int revealShips, int trackMis
         printf("\n");
     }
 }
-
 int placeShip(Player *player, int shipIndex, char *coordinate, char orientation) {
-    int row = coordinate[1] - '1';   // Parse row (1-based to 0-based)
-    int col = coordinate[0] - 'A';   // Parse column (A-J to 0-9)
+    int row, col;
 
-    if (isValidPlacement(player, shipIndex, row, col, orientation)) {
-        for (int i = 0; i < player->ships[shipIndex].size; i++) {
-            player->grid[row][col] = player->ships[shipIndex].name[0]; // Update grid with ship's character
-            if (orientation == 'h') {
-                col++;
-            } else {
-                row++;
+    while (1) {
+        row = coordinate[1] - '1';   // Parse row (1-based to 0-based)
+        col = coordinate[0] - 'A';   // Parse column (A-J to 0-9)
+
+        // Check if the placement is valid
+        if (isValidPlacement(player, shipIndex, row, col, orientation)) {
+            // Place the ship on the grid
+            for (int i = 0; i < player->ships[shipIndex].size; i++) {
+                player->grid[row][col] = player->ships[shipIndex].name[0]; // Update grid with ship's character
+                if (orientation == 'h') {
+                    col++;
+                } else {
+                    row++;
+                }
             }
+            player->ships[shipIndex].placed = 1; // Mark as placed
+            return 1; // Successful placement
+        } else {
+            // Inform the user about the specific issue
+            printf("Invalid placement. Please enter a new coordinate (e.g., B3) and orientation (h/v): ");
+            scanf("%s %c", coordinate, &orientation);
         }
-        player->ships[shipIndex].placed = 1;
-        return 1; // Successful placement
     }
-    return 0; // Failed placement
 }
-
 int isValidPlacement(Player *player, int shipIndex, int row, int col, char orientation) {
     // Check if the starting point is out of bounds
     if (row < 0 || col < 0 || row >= GRID_SIZE || col >= GRID_SIZE) {
