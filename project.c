@@ -41,6 +41,7 @@ void artillery(Player *attacker, Player *defender, char *coordinate);
 void torpedo(Player *attacker, Player *defender, char *coordinate);
 int getRandomPlayer();
 void clearScreen();
+void delay(int seconds);
 
 int main() {
     Player player1, player2;
@@ -93,8 +94,7 @@ int main() {
         displayGrid((turn == 0) ? &player2 : &player1, currentPlayer, 1, 1, difficultyLevel);
         if (currentPlayer->ships[i].size != 0) {
             do {
-                printf("Place %s (size %d): Enter coordinate (e.g., B3) and orientation (h/v): ",
-                       currentPlayer->ships[i].name, currentPlayer->ships[i].size);
+                printf("Place %s (size %d): Enter coordinate (e.g., B3) and orientation (h/v): ", currentPlayer->ships[i].name, currentPlayer->ships[i].size);
                 scanf("%s %c", coordinate, &orientation);
                 if (orientation != 'h' && orientation != 'v') {
                     printf("Invalid orientation. Please enter 'h' for horizontal or 'v' for vertical.\n");
@@ -119,8 +119,7 @@ int main() {
         displayGrid((turn == 1) ? &player1 : &player2, currentPlayer, 1, 1, difficultyLevel);
         if (currentPlayer->ships[i].size != 0) {
             do {
-                printf("Place %s (size %d): Enter coordinate (e.g., B3) and orientation (h/v): ",
-                       currentPlayer->ships[i].name, currentPlayer->ships[i].size);
+                printf("Place %s (size %d): Enter coordinate (e.g., B3) and orientation (h/v): ", currentPlayer->ships[i].name, currentPlayer->ships[i].size);
                 scanf("%s %c", coordinate, &orientation);
                 if (orientation != 'h' && orientation != 'v') {
                     printf("Invalid orientation. Please enter 'h' for horizontal or 'v' for vertical.\n");
@@ -158,7 +157,7 @@ int main() {
         } else if (strncmp(command, "Torpedo", 7) == 0) {
             if (attackingPlayer->nextTurnHasTorpedo) {
                 torpedo(attackingPlayer, defendingPlayer, command + 8);
-                attackingPlayer->nextTurnHasTorpedo = 0;
+                attackingPlayer->nextTurnHasTorpedo = 0;// Reset torpedo availability
             } else {
                 printf("Torpedo not available.\n");
             }
@@ -218,18 +217,19 @@ int placeShip(Player *player, int shipIndex, char *coordinate, char orientation)
     int row, col;
     col = coordinate[0] - 'A';
     row = (coordinate[1] - '0');
-
+    // Handle double-digit row inputs like A10
     if (coordinate[2] != '\0' && coordinate[2] >= '0' && coordinate[2] <= '9') {
         row = (coordinate[1] - '0') * 10 + (coordinate[2] - '0') - 1;
     } else {
         row -= 1;
     }
-
+    // Check for out-of-bounds
     if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) {
         printf("Invalid coordinates: out of bounds. Try again.\n");
+        delay(1);
         return 0;
     }
-
+    // Check if the placement is valid
     if (isValidPlacement(player, shipIndex, row, col, orientation)) {
         for (int i = 0; i < player->ships[shipIndex].size; i++) {
             player->grid[row][col] = player->ships[shipIndex].name[0];
@@ -241,37 +241,39 @@ int placeShip(Player *player, int shipIndex, char *coordinate, char orientation)
         }
         player->ships[shipIndex].placed = 1;
         return 1;
-    } else {
-        printf("Invalid placement. Please enter a new coordinate (e.g., B3) and orientation (h/v): ");
-        return 0;
     }
 }
 
 int isValidPlacement(Player *player, int shipIndex, int row, int col, char orientation) {
     if (row < 0 || col < 0 || row >= GRID_SIZE || col >= GRID_SIZE) {
         printf("Placement out of bounds. Try again.\n");
+        delay(1);
         return 0;
     }
 
     if (orientation == 'h') {
         if (col + player->ships[shipIndex].size > GRID_SIZE) {
             printf("Ship extends beyond the grid horizontally. Try again.\n");
+            delay(1);
             return 0;
         }
         for (int i = 0; i < player->ships[shipIndex].size; i++) {
             if (player->grid[row][col + i] != '~') {
                 printf("Overlap with another ship detected. Try again.\n");
+                delay(1);
                 return 0;
             }
         }
     } else {
         if (row + player->ships[shipIndex].size > GRID_SIZE) {
             printf("Ship extends beyond the grid vertically. Try again.\n");
+            delay(1);
             return 0;
         }
         for (int i = 0; i < player->ships[shipIndex].size; i++) {
             if (player->grid[row + i][col] != '~') {
                 printf("Overlap with another ship detected. Try again.\n");
+                delay(1);
                 return 0;
             }
         }
@@ -344,7 +346,7 @@ void radarSweep(Player *player, char *coordinate, Player *opponent) {
                 continue;
             }
             if (opponent->grid[i][j] != '~' && opponent->grid[i][j] != 'o' && opponent->grid[i][j] != '*') {
-                shipFound = 1;
+                shipFound = 1;// Ship found
                 break;
             }
         }
@@ -372,20 +374,20 @@ void SmokeScreen(Player *player, char *coordinate, Player *opponent) {
         row = coordinate[1] - '1';
     } else if (strlen(coordinate) == 3 && coordinate[1] == '1' && coordinate[2] == '0') {
         col = coordinate[0] - 'A';
-        row = 9;
+        row = 9;// Row 10
     } else {
         printf("Invalid coordinate input. Please choose a valid top-left coordinate for the area.\n");
         return;
     }
-
+    // Ensure the 2x2 area is within bounds
     if (row < 0 || col < 0 || row + 1 >= GRID_SIZE || col + 1 >= GRID_SIZE) {
         printf("Invalid coordinate input. Please choose a valid top-left coordinate for the area.\n");
         return;
     }
-
+    // Apply smoke screen
     for (int i = row; i <= row + 1; i++) {
         for (int j = col; j <= col + 1; j++) {
-            opponent->grid[i][j] = 'X';
+            opponent->grid[i][j] = 'X';// Mark the area as obscured
         }
     }
 
@@ -404,7 +406,7 @@ void checkSunkShips(Player *attacker, Player *defender) {
             sunkShips++;
         }
     }
-
+    // Unlock torpedo when the third ship is sunk
     if (sunkShips >= 3) {
         attacker->nextTurnHasTorpedo = 1;
         printf("%s has unlocked the Torpedo for the next turn!\n", attacker->name);
@@ -423,34 +425,44 @@ void artillery(Player *attacker, Player *defender, char *coordinate) {
         row = coordinate[1] - '1';
     } else if (strlen(coordinate) == 3 && coordinate[1] == '1' && coordinate[2] == '0') {
         col = coordinate[0] - 'A';
-        row = 9;
+        row = 9;// Row 10
     } else {
         printf("Invalid coordinates for artillery strike.\n");
         return;
     }
-
-    if (row < 0 || col < 0 || row + 1 >= GRID_SIZE || col + 1 >= GRID_SIZE) {
+    // Ensure the 2x2 grid is within bounds
+if (row < 0 || col < 0 || row + 1 >= GRID_SIZE || col + 1 >= GRID_SIZE) {
         printf("Invalid coordinates for artillery strike.\n");
         return;
     }
 
     printf("Artillery strike at %s...\n", coordinate);
-
     for (int i = row; i <= row + 1; i++) {
         for (int j = col; j <= col + 1; j++) {
-            char targetCoordinate[3];
-            targetCoordinate[0] = 'A' + j;
-            targetCoordinate[1] = '1' + i;
-            targetCoordinate[2] = '\0';
-
-            fire(attacker, defender, targetCoordinate);
+            if (defender->grid[i][j] != '~' && defender->grid[i][j] != 'o' && defender->grid[i][j] != '*') {
+                printf("Hit at %c%d!\n", 'A' + j, i + 1);
+                char shipChar = defender->grid[i][j];
+                defender->grid[i][j] = '*';
+                for (int k = 0; k < MAX_SHIPS; k++) {
+                    if (defender->ships[k].name[0] == shipChar) {
+                        defender->ships[k].hits++;
+                        break;
+                    }
+                }
+            } else {
+                printf("Miss at %c%d.\n", 'A' + j, i + 1);
+                defender->grid[i][j] = 'o';
+            }
         }
     }
 
     attacker->nextTurnHasArtillery = 0;
+    checkSunkShips(attacker, defender);
 }
+
 void torpedo(Player *attacker, Player *defender, char *coordinate) {
     int row, col;
+
     if (strlen(coordinate) == 2) {
         col = coordinate[0] - 'A';
         row = coordinate[1] - '1';
@@ -458,25 +470,34 @@ void torpedo(Player *attacker, Player *defender, char *coordinate) {
         col = coordinate[0] - 'A';
         row = 9;
     } else {
-        printf("Invalid coordinates for torpedo strike.\n");
+        printf("Invalid coordinates for torpedo.\n");
         return;
     }
 
     if (row < 0 || col < 0 || row >= GRID_SIZE || col >= GRID_SIZE) {
-        printf("Invalid coordinates for torpedo strike.\n");
+        printf("Invalid coordinates for torpedo.\n");
         return;
     }
 
-    printf("Torpedo strike along row %d...\n", row + 1);
-
-    for (int j = 0; j < GRID_SIZE; j++) {
-        char targetCoordinate[3];
-        targetCoordinate[0] = 'A' + j;
-        targetCoordinate[1] = '1' + row;
-        targetCoordinate[2] = '\0';
-
-        fire(attacker, defender, targetCoordinate);
+    printf("Torpedo fired at %s...\n", coordinate);
+    for (int i = 0; i < GRID_SIZE; i++) {
+        if (defender->grid[row][i] != '~' && defender->grid[row][i] != 'o' && defender->grid[row][i] != '*') {
+            printf("Hit at %c%d!\n", 'A' + i, row + 1);
+            char shipChar = defender->grid[row][i];
+            defender->grid[row][i] = '*';
+            for (int j = 0; j < MAX_SHIPS; j++) {
+                if (defender->ships[j].name[0] == shipChar) {
+                    defender->ships[j].hits++;
+                    break;
+                }
+            }
+        } else {
+            printf("Miss at %c%d.\n", 'A' + i, row + 1);
+            defender->grid[row][i] = 'o';
+        }
     }
+
+    checkSunkShips(attacker, defender);
 }
 
 int getRandomPlayer() {
@@ -484,6 +505,8 @@ int getRandomPlayer() {
     return rand() % 2;
 }
 
-void clearScreen() {
-    printf("\033[H\033[J");
+void delay(int seconds) {
+    int milli_seconds = 1000 * seconds;
+    clock_t start_time = clock();
+    while (clock() < start_time + milli_seconds);
 }
