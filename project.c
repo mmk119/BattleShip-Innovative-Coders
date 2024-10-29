@@ -412,6 +412,7 @@ void checkSunkShips(Player *attacker, Player *defender) {
             printf("Ship sunk: %s\n", defender->ships[i].name);
             attacker->ShipsSunk++;
             sunkShips++;
+            printf("number of ship sunked: %d\n",sunkShips);
         }
     }
 
