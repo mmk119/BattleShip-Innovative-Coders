@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <ctype.h>
 
 #define GRID_SIZE 10
 #define MAX_SHIPS 4
@@ -27,6 +28,7 @@ typedef struct {
     int hasUsedArtilleryThisTurn;
     int nextTurnHasTorpedo;// New field for torpedo availability
 } Player;
+char smoke_grid[GRID_SIZE][GRID_SIZE];   // rama : Auxiliary grid to mark smoke-covered cells
 
 // Function prototypes
 void initializeGrid(Player *player);
@@ -42,6 +44,7 @@ void torpedo(Player *attacker, Player *defender, char *coordinate);// New functi
 int getRandomPlayer();
 void clearScreen();
 void delay(int seconds);
+void activate_smoke_screen(int x, int y); // rama 
 
 int main() {
     Player player1, player2;
@@ -135,6 +138,10 @@ int main() {
     }
 
     clearScreen();
+
+        // After ship placement and before the while loop
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF) {}
 
     // Gameplay loop
     while (1) {
@@ -297,12 +304,12 @@ void fire(Player *attacker, Player *defender, char *coordinate) {
         col = coordinate[0] - 'A';
         row = 9; // Row 10
     } else {
-        printf("Invalid coordinates. Missed!\n");
+        printf("Invalid coordinates.\n");
         return;
     }
 
     if (row < 0 || col < 0 || row >= GRID_SIZE || col >= GRID_SIZE) {
-        printf("Invalid coordinates. Missed!\n");
+        printf("Invalid coordinates.\n");
         return;
     }
 
@@ -322,106 +329,127 @@ void fire(Player *attacker, Player *defender, char *coordinate) {
     }
 }
 
+// Radar sweep function with smoke screen check
 void radarSweep(Player *player, char *coordinate, Player *opponent) {
-    int row, col;
-    if (strlen(coordinate) == 2) {
-        col = coordinate[0] - 'A';
-        row = coordinate[1] - '1';
-    } else if (strlen(coordinate) == 3 && coordinate[1] == '1' && coordinate[2] == '0') {
-        col = coordinate[0] - 'A';
-        row = 9; // Row 10
-    } else {
-        printf("Invalid coordinates for radar sweep.\n");
-        return;
-    }
+  int row, col;
+  if (strlen(coordinate) == 2) {
+      col = coordinate[0] - 'A';
+      row = coordinate[1] - '1';
+  } else if (strlen(coordinate) == 3 && coordinate[1] == '1' && coordinate[2] == '0') {
+      col = coordinate[0] - 'A';
+      row = 9;
+  } else {
+      printf("Invalid coordinates for radar sweep.\n");
+      return;
+  }
 
-    if (row < 0 || col < 0 || row >= GRID_SIZE || col >= GRID_SIZE) {
-        printf("Invalid coordinates for radar sweep.\n");
-        return;
-    }
+  if (row < 0 || col < 0 || row >= GRID_SIZE || col >= GRID_SIZE) {
+      printf("Invalid coordinates for radar sweep.\n");
+      return;
+  }
 
-    if (player->radarSweeps >= 3) {
-        printf("%s has already used 3 radar sweeps and loses their turn.\n", player->name);
-        return;
-    }
+  if (player->radarSweeps >= 3) {
+      printf("%s has already used 3 radar sweeps and loses their turn.\n", player->name);
+      return;
+  }
 
-printf("Radar sweep at %s...\n", coordinate);
-    int shipFound = 0;
-    for (int i = row; i <= row + 1 && i < GRID_SIZE; i++) {
-        for (int j = col; j <= col + 1 && j < GRID_SIZE; j++) {
-            if (opponent->grid[i][j] == 'X') {
-            continue;
-            }
-            if (opponent->grid[i][j] != '~' && opponent->grid[i][j] != 'o' &&  opponent->grid[i][j] != '*') {
-                shipFound = 1; // Ship found
-                break;
-            }
-        }
-        if (shipFound) break;
-    }
+ 
+  int shipFound = 0;
+  for (int i = row; i <= row + 1 && i < GRID_SIZE; i++) {
+      for (int j = col; j <= col + 1 && j < GRID_SIZE; j++) {
+          if (smoke_grid[i][j] == 'X') {
+             printf("No enemy ships found.\n");
+              return;  // Exit if smoke screen is present
+          }
+          if (opponent->grid[i][j] != '~' && opponent->grid[i][j] != 'o' && opponent->grid[i][j] != '*') {
+              shipFound = 1;
+              break;
+          }
+      }
+      if (shipFound) break;
+  }
 
-    if (shipFound) {
-        printf("Enemy ships found!\n");
-    } else {
-        printf("No enemy ships found.\n");
-    }
+  if (shipFound) {
+      printf("Enemy ships found!\n");
+  } else {
+      printf("No enemy ships found.\n");
+  }
 
-    player->radarSweeps++;
+  player->radarSweeps++;
 }
 
+// Smoke screen function with validation and applying smoke screen effect
 void SmokeScreen(Player *player, char *coordinate, Player *opponent) {
-    if (player->SmokeScreen >= player->ShipsSunk) {
-        printf("You are not allowed to use Smoke Screen. You lost your turn!\n");
-        return;
-    }
+  if (player->SmokeScreen >= player->ShipsSunk) {
+      printf("You are not allowed to use Smoke Screen. You lost your turn!\n");
+      return;
+  }
 
-    int row, col;
-    if (strlen(coordinate) == 2) {
-        col = coordinate[0] - 'A';
-        row = coordinate[1] - '1';
-    } else if (strlen(coordinate) == 3 && coordinate[1] == '1' && coordinate[2] == '0') {
-        col = coordinate[0] - 'A';
-        row = 9; // Row 10
-    } else {
-        printf("Invalid coordinate input. Please choose a valid top-left coordinate for the area.\n");
-        return;
-    }
-    // Ensure the 2x2 area is within bounds
-    if (row < 0 || col < 0 || row + 1 >= GRID_SIZE || col + 1 >= GRID_SIZE) {
-        printf("Invalid coordinate input. Please choose a valid top-left coordinate for the area.\n");
-        return;
-    }
+  int row, col;
+  if (strlen(coordinate) == 2) {
+      col = coordinate[0] - 'A';
+      row = coordinate[1] - '1';
+  } else if (strlen(coordinate) == 3 && coordinate[1] == '1' && coordinate[2] == '0') {
+      col = coordinate[0] - 'A';
+      row = 9;
+  } else {
+      printf("Invalid coordinate input. Please choose a valid top-left coordinate for the area.\n");
+      return;
+  }
+  
+  if (row < 0 || col < 0 || row + 1 >= GRID_SIZE || col + 1 >= GRID_SIZE) {
+      printf("Invalid coordinate input. Please choose a valid top-left coordinate for the area.\n");
+      return;
+  }
 
-    // Apply smoke screen
-    for (int i = row; i <= row + 1; i++) {
-        for (int j = col; j <= col + 1; j++) {
-            opponent->grid[i][j] = 'X'; // Mark the area as obscured
-        }
-    }
+  // Call activate_smoke_screen to apply the smoke on the opponent's grid
+  activate_smoke_screen(row, col);
 
-    player->SmokeScreen++;
-    clearScreen();
-    printf("Smoke Screen is applied at %s by %s.\n", coordinate, player->name);
+  player->SmokeScreen++;
+  
+}
+void activate_smoke_screen(int x, int y) {
+  for (int i = x; i < x + 2 && i < GRID_SIZE; i++) {
+      for (int j = y; j < y + 2 && j < GRID_SIZE; j++) {
+          smoke_grid[i][j] = 'X';  // Mark as obscured in the smoke grid
+      }
+  }
 }
 
 void checkSunkShips(Player *attacker, Player *defender) {
-    int sunkShips = 0;
+    int totalSunkShips = 0;
+    int allShipsSunk = 1;
     for (int i = 0; i < MAX_SHIPS; i++) {
         if (defender->ships[i].hits == defender->ships[i].size && !defender->ships[i].isSunk) {
-            defender->ships[i].isSunk = 1;
+            defender->ships[i].isSunk = 1;  // Mark the ship as sunk
             printf("Ship sunk: %s\n", defender->ships[i].name);
-            attacker->ShipsSunk++;
-            sunkShips++;
-            printf("number of ship sunked: %d\n",sunkShips);
+            attacker->ShipsSunk++;  // Increment attacker's sunk ships count
+            totalSunkShips++;
         }
+        // If there's at least one ship that isn't sunk, set allShipsSunk to 0
+    if (!defender->ships[i].isSunk) {
+            allShipsSunk = 0;
+    }
+    
+        }
+     // If all defender's ships are sunk, declare the winner and exit
+    if (allShipsSunk) {
+        return;
     }
 
-    // Unlock torpedo when the third ship is sunk
-    if (sunkShips >= 3) {
+    // If at least one ship is sunk during this turn, unlock artillery for the next turn
+    if (totalSunkShips > 0) {
+        attacker->nextTurnHasArtillery = 1;
+        printf("%s has unlocked Artillery and Smoke Screen for the next turn!\n", attacker->name);
+    }
+
+    // Unlock torpedo when exactly three ships have been sunk
+    if (attacker->ShipsSunk == 3) {
         attacker->nextTurnHasTorpedo = 1;
         printf("%s has unlocked the Torpedo for the next turn!\n", attacker->name);
     }
 }
+
 
 void artillery(Player *attacker, Player *defender, char *coordinate) {
     if (!attacker->nextTurnHasArtillery) {
@@ -467,30 +495,79 @@ void artillery(Player *attacker, Player *defender, char *coordinate) {
 }
 
 void torpedo(Player *attacker, Player *defender, char *coordinate) {
-    int isColumn = (coordinate[0] >= 'A' && coordinate[0] <= 'J');
+    if (!attacker->nextTurnHasTorpedo) {
+        printf("Torpedo is not available!\n");
+        return;
+    }
+
     int row = -1, col = -1;
 
-    if (isColumn) {
-        col = coordinate[0] - 'A';
-        printf("Torpedo fired at column %c...\n", coordinate[0]);
+    // Convert first character to uppercase to handle lowercase input
+    coordinate[0] = toupper(coordinate[0]);
+
+    // Validate and parse coordinate input for a single letter or digit
+    if (strlen(coordinate) == 1) {
+        if (isalpha(coordinate[0])) { // Case for column (A-J)
+            col = coordinate[0] - 'A';
+        } else if (isdigit(coordinate[0])) { // Case for row (1-9)
+            row = coordinate[0] - '1';
+        } else {
+            printf("Invalid coordinate for torpedo strike.\n");
+            return;
+        }
+    } else if (strlen(coordinate) == 2 && coordinate[0] == '1' && coordinate[1] == '0') { // Case for row 10
+        row = 9;
+    } else {
+        printf("Invalid coordinate for torpedo strike.\n");
+        return;
+    }
+
+    // Check if coordinates are within bounds
+    if ((row < 0 && col < 0) || (row >= GRID_SIZE || col >= GRID_SIZE)) {
+        printf("Invalid coordinates for torpedo strike.\n");
+        return;
+    }
+
+    if (col != -1) { // Column-based torpedo strike
+        printf("Torpedo strike at column %c...\n", coordinate[0]);
         for (int i = 0; i < GRID_SIZE; i++) {
             if (defender->grid[i][col] != '~' && defender->grid[i][col] != 'o' && defender->grid[i][col] != '*') {
-                printf("Hit at %c%d!\n", 'A' + col, i + 1);
+                printf("Hit at %c%d!\n", coordinate[0], i + 1);
+                char shipChar = defender->grid[i][col];
                 defender->grid[i][col] = '*';
+                for (int k = 0; k < MAX_SHIPS; k++) {
+                    if (defender->ships[k].name[0] == shipChar) {
+                        defender->ships[k].hits++;
+                        break;
+                    }
+                }
+            } else if (defender->grid[i][col] == '~') {
+                defender->grid[i][col] = 'o';
             }
         }
-    } else {
-        row = coordinate[0] - '1';
-        printf("Torpedo fired at row %d...\n", row + 1);
+    } else if (row != -1) { // Row-based torpedo strike
+        printf("Torpedo strike at row %d...\n", row + 1);
         for (int j = 0; j < GRID_SIZE; j++) {
             if (defender->grid[row][j] != '~' && defender->grid[row][j] != 'o' && defender->grid[row][j] != '*') {
                 printf("Hit at %c%d!\n", 'A' + j, row + 1);
+                char shipChar = defender->grid[row][j];
                 defender->grid[row][j] = '*';
+                for (int k = 0; k < MAX_SHIPS; k++) {
+                    if (defender->ships[k].name[0] == shipChar) {
+                        defender->ships[k].hits++;
+                        break;
+                    }
+                }
+            } else if (defender->grid[row][j] == '~') {
+                defender->grid[row][j] = 'o';
             }
         }
     }
-}
 
+    // Reset the torpedo flag after use
+    attacker->nextTurnHasTorpedo = 0;
+    printf("Torpedo has been used by %s!\n", attacker->name);
+}
 int getRandomPlayer() {
     srand(time(NULL));
     return rand() % 2;
