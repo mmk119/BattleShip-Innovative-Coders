@@ -45,6 +45,9 @@ int getRandomPlayer();
 void clearScreen();
 void delay(int seconds);
 void activate_smoke_screen(int x, int y); // rama 
+void toLowerCase(char *str);
+void toUpperCase(char *str);
+
 
 int main() {
     Player player1, player2;
@@ -57,10 +60,18 @@ int main() {
     player1.nextTurnHasTorpedo = 0;  // Initialize torpedo availability
     player2.nextTurnHasTorpedo = 0;  // Initialize torpedo availability
 
-    printf("Choose tracking difficulty (1 for easy, 2 for hard): ");
-    scanf("%d", &difficultyLevel);
-    getchar(); 
-
+    while(1) { 
+        printf("Choose tracking difficulty (1 for easy, 2 for medium, 3 for hard): ");
+        scanf("%d", &difficultyLevel);
+        getchar(); 
+        if ((difficultyLevel != 1) && (difficultyLevel != 2) && (difficultyLevel != 3) ){
+            printf("Invalid Input Please choose a correct value \n");
+        
+        }
+        else{
+            break;
+        }
+    } 
     // Get player names
     printf("Enter name for Player 1: ");
     fgets(player1.name, MAX_NAME_LENGTH, stdin);
@@ -100,6 +111,9 @@ int main() {
                 printf("Place %s (size %d): Enter coordinate (e.g., B3) and orientation (h/v): ", 
                         currentPlayer->ships[i].name, currentPlayer->ships[i].size);
                 scanf("%s %c", coordinate, &orientation);
+                toLowerCase(&orientation);
+                toUpperCase(coordinate);
+                printf(coordinate);
                 if (orientation != 'h' && orientation != 'v') {
                     printf("Invalid orientation. Please enter 'h' for horizontal or 'v' for vertical.\n");
                 }
@@ -125,6 +139,8 @@ int main() {
             do {
                 printf("Place %s (size %d): Enter coordinate (e.g., B3) and orientation (h/v): ", currentPlayer->ships[i].name, currentPlayer->ships[i].size);
                 scanf("%s %c", coordinate, &orientation);
+                toLowerCase(&orientation);
+                toUpperCase(coordinate);
                 if (orientation != 'h' && orientation != 'v') {
                     printf("Invalid orientation. Please enter 'h' for horizontal or 'v' for vertical.\n");
                 }
@@ -153,16 +169,16 @@ int main() {
         fgets(command, sizeof(command), stdin);
         command[strcspn(command, "\n")] = 0;
 
-        if (strncmp(command, "Fire", 4) == 0) {
+        if ( (strncmp(command, "Fire", 4) == 0)  || (strncmp(command, "fire", 4) == 0)) {
             fire(attackingPlayer, defendingPlayer, command + 5);
             checkSunkShips(attackingPlayer, defendingPlayer);
-        } else if (strncmp(command, "Radar", 5) == 0) {
+        } else if ( (strncmp(command, "Radar", 5) == 0)  || (strncmp(command, "radar", 5) == 0) ){
             radarSweep(attackingPlayer, command + 6, defendingPlayer);
-        } else if (strncmp(command, "Smoke Screen", 12) == 0) {
+        } else if ( (strncmp(command, "Smoke Screen", 12) == 0) || (strncmp(command, "smoke screen", 12) == 0) ){
             SmokeScreen(attackingPlayer, command + 13, defendingPlayer);
-        } else if (strncmp(command, "Artillery", 9) == 0) {
+        } else if ( (strncmp(command, "Artillery", 9) == 0) || (strncmp(command, "artillery", 9) == 0) ) {
             artillery(attackingPlayer, defendingPlayer, command + 10);
-        } else if (strncmp(command, "Torpedo", 7) == 0) {
+        } else if ( (strncmp(command, "Torpedo", 7) == 0) || (strncmp(command, "torpedo", 7) == 0) ) {
             if (attackingPlayer->nextTurnHasTorpedo) {
                 torpedo(attackingPlayer, defendingPlayer, command + 8);
                 attackingPlayer->nextTurnHasTorpedo = 0; // Reset torpedo availability
@@ -585,4 +601,25 @@ void delay(int seconds) {
     int milli_seconds = 1000 * seconds;
     clock_t start_time = clock();
     while (clock() < start_time + milli_seconds);
+}
+
+void toLowerCase(char *str) {
+    char *temp = str; 
+
+    while (*temp != '\0') {
+        if ((*temp >= 'A') && (*temp <= 'Z')) {
+            *temp += ('a' - 'A'); 
+        }
+        temp++;
+    }
+}
+void toUpperCase(char *str) {
+    char *temp = str; 
+
+    while (*temp != '\0') {
+        if ((*temp >= 'a') && (*temp <= 'z')) {
+            *temp -= ('a' - 'A'); 
+        }
+        temp++; 
+    }
 }
