@@ -237,6 +237,8 @@ void displayGrid(Player *player, Player *opponent, int revealShips, int trackMis
     }
 }
 int placeShip(Player *player, int shipIndex, char *coordinate, char orientation) {
+    toUpperCase(coordinate);
+    toLowerCase(&orientation);
     int row, col;
     col = coordinate[0] - 'A';
     row = (coordinate[1] - '0');
@@ -275,6 +277,7 @@ int placeShip(Player *player, int shipIndex, char *coordinate, char orientation)
 }
 
 int isValidPlacement(Player *player, int shipIndex, int row, int col, char orientation) {
+    toLowerCase(&orientation);
     if (row < 0 || col < 0 || row >= GRID_SIZE || col >= GRID_SIZE) {
         printf("Placement out of bounds. Try again.\n");
         delay(1);
@@ -312,6 +315,7 @@ int isValidPlacement(Player *player, int shipIndex, int row, int col, char orien
 }
 
 void fire(Player *attacker, Player *defender, char *coordinate) {
+    toUpperCase(coordinate);
     int row, col;
     if (strlen(coordinate) == 2) {
         col = coordinate[0] - 'A';
@@ -347,6 +351,7 @@ void fire(Player *attacker, Player *defender, char *coordinate) {
 
 // Radar sweep function with smoke screen check
 void radarSweep(Player *player, char *coordinate, Player *opponent) {
+  toUpperCase(coordinate);
   int row, col;
   if (strlen(coordinate) == 2) {
       col = coordinate[0] - 'A';
@@ -396,6 +401,7 @@ void radarSweep(Player *player, char *coordinate, Player *opponent) {
 
 // Smoke screen function with validation and applying smoke screen effect
 void SmokeScreen(Player *player, char *coordinate, Player *opponent) {
+  toUpperCase(coordinate);
   if (player->SmokeScreen >= player->ShipsSunk) {
       printf("You are not allowed to use Smoke Screen. You lost your turn!\n");
       return;
@@ -468,6 +474,7 @@ void checkSunkShips(Player *attacker, Player *defender) {
 
 
 void artillery(Player *attacker, Player *defender, char *coordinate) {
+    toUpperCase(coordinate);
     if (!attacker->nextTurnHasArtillery) {
         printf("Artillery is not available for this turn!\n");
         return;
@@ -511,6 +518,7 @@ void artillery(Player *attacker, Player *defender, char *coordinate) {
 }
 
 void torpedo(Player *attacker, Player *defender, char *coordinate) {
+    toUpperCase(coordinate);
     if (!attacker->nextTurnHasTorpedo) {
         printf("Torpedo is not available!\n");
         return;
