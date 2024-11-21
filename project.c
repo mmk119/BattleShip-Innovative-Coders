@@ -158,13 +158,15 @@ int main() {
         // After ship placement and before the while loop
         int c;
         while ((c = getchar()) != '\n' && c != EOF) {}
-
+    int first = 0;
     // Gameplay loop
     while (1) {
         Player *attackingPlayer = (turn % 2 == 0) ? &player1 : &player2;
         Player *defendingPlayer = (turn % 2 == 0) ? &player2 : &player1;
-
-        displayGrid(defendingPlayer, attackingPlayer, 0, difficultyLevel == 1,difficultyLevel);
+        if (first >= 2){
+            displayGrid(defendingPlayer, attackingPlayer, 0, difficultyLevel == 1,difficultyLevel);
+        }
+        //displayGrid(defendingPlayer, attackingPlayer, 0, difficultyLevel == 1,difficultyLevel);
         printf("%s's turn. Enter command (Fire or Radar or Smoke Screen or Artillery or Torpedo)[coordinate]: ", attackingPlayer->name);
         fgets(command, sizeof(command), stdin);
         command[strcspn(command, "\n")] = 0;
@@ -189,7 +191,7 @@ int main() {
             printf("Invalid command.\n");
             continue;
         }
-
+        first +=1;
         // Check for game over
         int allShipsSunk = 1;
         for (int i = 0; i < MAX_SHIPS; i++) {
@@ -205,6 +207,7 @@ int main() {
         }
 
         turn++;
+        
     }
 
     return 0;
@@ -219,7 +222,7 @@ void initializeGrid(Player *player) {
 }
 
 void displayGrid(Player *player, Player *opponent, int revealShips, int trackMisses,int difficultyLevel ) {
-    printf("   A B C D E F G H I J\n");
+    printf("\n   A B C D E F G H I J\n");
     for (int i = 0; i < GRID_SIZE; i++) {
         printf("%2d ", i + 1); 
         for (int j = 0; j < GRID_SIZE; j++) {
@@ -305,7 +308,7 @@ int isValidPlacement(Player *player, int shipIndex, int row, int col, char orien
         }
         for (int i = 0; i < player->ships[shipIndex].size; i++) {
             if (player->grid[row + i][col] != '~') {
-                printf("Overlap with another ship detected. Try again.\n");
+                printf(" Overlap with another ship detected. Try again.\n");
                 delay(1);
                 return 0;
             }
