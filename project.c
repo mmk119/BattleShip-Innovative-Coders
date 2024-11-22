@@ -346,7 +346,11 @@ void fire(Player *attacker, Player *defender, char *coordinate) {
                 break;
             }
         }
-    } else {
+    } 
+    else if(defender->grid[row][col] == '*'){
+        printf("Ship already hit here!\n");
+    }
+    else {
         printf("Miss!\n");
         defender->grid[row][col] = 'o';
     }
