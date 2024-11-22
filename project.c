@@ -163,7 +163,7 @@ int main() {
     while (1) {
         Player *attackingPlayer = (turn % 2 == 0) ? &player1 : &player2;
         Player *defendingPlayer = (turn % 2 == 0) ? &player2 : &player1;
-        if (first >= 2){
+        if (first >= 1){
             displayGrid(defendingPlayer, attackingPlayer, 0, difficultyLevel == 1,difficultyLevel);
         }
         //displayGrid(defendingPlayer, attackingPlayer, 0, difficultyLevel == 1,difficultyLevel);
