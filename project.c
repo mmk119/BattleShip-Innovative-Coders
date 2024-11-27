@@ -66,30 +66,45 @@ int main() {
     player1.nextTurnHasTorpedo = 0;  // Initialize torpedo availability
     player2.nextTurnHasTorpedo = 0;  // Initialize torpedo availability
 
-    while(1) { 
+
+    char input[10];  // Buffer for user input
+
+    while (1) {
         printf("Choose tracking difficulty (1 for easy, 2 for medium, 3 for hard): ");
-        scanf("%d", &difficultyLevel);
-        getchar(); 
-        if ((difficultyLevel != 1) && (difficultyLevel != 2) && (difficultyLevel != 3) ){
-            printf("Invalid Input Please choose a correct value \n");
+        fgets(input, sizeof(input), stdin); 
+
         
-        }
-        else{
-            break;
-        }
-    } 
-    while(1){
-        printf("Press 1 for single player or 2 for multiplayers: ");
-        
-        scanf("%d", &choice);
-        getchar(); 
-        if((choice != 1) && (choice != 2)){
-             printf("Invalid Input Please choose a correct value \n");
-        }
-          else{
+        input[strcspn(input, "\n")] = 0;
+
+        char *endptr;
+        difficultyLevel = strtol(input, &endptr, 10); // Convert to integer
+
+       
+        if (*endptr != '\0' || difficultyLevel < 1 || difficultyLevel > 3) {
+            printf("Invalid Input. Please choose a correct value (1, 2, or 3).\n");
+        } else {
             break;
         }
     }
+
+        while (1) {
+        printf("Press 1 for single player or 2 for multiplayers: ");
+        fgets(input, sizeof(input), stdin); 
+
+        
+        input[strcspn(input, "\n")] = 0;
+
+        char *endptr;
+        difficultyLevel = strtol(input, &endptr, 10); // Convert to integer
+
+       
+        if (*endptr != '\0' || difficultyLevel < 1 || difficultyLevel > 2) {
+            printf("Invalid Input. Please choose a correct value (1, or 2).\n");
+        } else {
+            break;
+        }
+    }
+
     if (choice == 2){
         // Get player names
         printf("Enter name for Player 1: ");
