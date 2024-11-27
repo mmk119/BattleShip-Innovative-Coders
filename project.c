@@ -50,6 +50,10 @@ void toLowerCase(char *str);
 void toUpperCase(char *str);
 void generateRandomPlacement(char *coordinate, char *orientation);
 void placeShipsRandomly(Player *currentPlayer);
+void BotFire( Player *defender, int row, int col);
+void botEasy(Player *bot, Player *opponent);
+void botMedium(Player *bot, Player *opponent);
+void botHard(Player *bot, Player *opponent);
 
 int main() {
     Player player1, player2;
@@ -294,14 +298,12 @@ int main() {
         while (1) {
             Player *attackingPlayer = (turn % 2 == 0) ? &player1 : &player2;
             Player *defendingPlayer = (turn % 2 == 0) ? &player2 : &player1;
-            if (first >= 1){
-                displayGrid(defendingPlayer, attackingPlayer, 0, difficultyLevel == 1,difficultyLevel);
-            }
+           
             if (! attackingPlayer->isBot){
                 printf("%s's turn. Enter command (Fire or Radar or Smoke Screen or Artillery or Torpedo)[coordinate]: ", attackingPlayer->name);
                 fgets(command, sizeof(command), stdin);
                 command[strcspn(command, "\n")] = 0;
-
+                
                 if ( (strncmp(command, "Fire", 4) == 0)  || (strncmp(command, "fire", 4) == 0)) {
                     fire(attackingPlayer, defendingPlayer, command + 5);
                     checkSunkShips(attackingPlayer, defendingPlayer);
@@ -322,13 +324,26 @@ int main() {
                     printf("Invalid command.\n");
                     continue;
                 }
+               
+                displayGrid( attackingPlayer , defendingPlayer, 0, difficultyLevel == 1,difficultyLevel);
+               
             }
             else{
                 printf("Bot turn \n");
 
                 // logic for bot play go here
+                switch (difficultyLevel) {
+                        case 1: botEasy(&player2, &player1); break;
+                        case 2: botMedium(&player2, &player1); break;
+                        case 3: botHard(&player2, &player1); break;
+                        default: printf("Invalid difficulty level.\n"); exit(1);
+                        
+                    }
+                
+                displayGrid(attackingPlayer, defendingPlayer , 0, difficultyLevel == 1,difficultyLevel);
+                    
             }
-            first +=1;
+    
             // Check for game over
             int allShipsSunk = 1;
             for (int i = 0; i < MAX_SHIPS; i++) {
@@ -367,7 +382,7 @@ void displayGrid(Player *player, Player *opponent, int revealShips, int trackMis
         for (int j = 0; j < GRID_SIZE; j++) {
             if (opponent->grid[i][j] == '*') {
                 printf("* ");
-            } else if (opponent->grid[i][j] == 'o' && trackMisses && difficultyLevel == 1) {
+            } else if (opponent->grid[i][j] == 'o') {
                 printf("o ");
             } else if (revealShips && opponent->grid[i][j] != '~') {
                 printf("%c ", opponent->grid[i][j]);
@@ -446,7 +461,7 @@ int isValidPlacement(Player *player, int shipIndex, int row, int col, char orien
         for (int i = 0; i < player->ships[shipIndex].size; i++) {
             if (player->grid[row][col + i] != '~') {
                 if (isBot != 1){
-                    printf(" Overlap with another ship detected. Try again.\n");
+                    printf("Overlap with another ship detected. Try again.\n");
                     delay(1);
                     
                 }
@@ -826,4 +841,80 @@ void placeShipsRandomly(Player *currentPlayer) {
             } while (0); 
         }
     }
+}
+
+
+// bot fire
+void BotFire( Player *defender, int row, int col) {
+    if (defender->grid[row][col] != '~' && defender->grid[row][col] != 'o' && defender->grid[row][col] != '*') {
+        printf("Bot hits you!\n");
+        char shipChar = defender->grid[row][col];
+        defender->grid[row][col] = '*';
+        for (int i = 0; i < MAX_SHIPS; i++) {
+            if (defender->ships[i].name[0] == shipChar) {
+                defender->ships[i].hits++;
+                break;
+            }
+        }
+    } 
+    else {
+        printf("Bot misses his shot!\n");
+        defender->grid[row][col] = 'o';
+    }
+}
+
+
+// Bot: Easy level
+void botEasy(Player *bot, Player *opponent) {
+    int row, col;
+    do {
+        row = rand() % GRID_SIZE;
+        col = rand() % GRID_SIZE;
+    } while (opponent->grid[row][col] == '*' || opponent->grid[row][col] == 'o');
+    BotFire(opponent, row, col);
+}
+
+// Bot: Medium level
+void botMedium(Player *bot, Player *opponent) {
+    // Medium bot attacks intelligently based on previous hits
+    static int lastHitRow = -1, lastHitCol = -1;
+    if (lastHitRow != -1 && lastHitCol != -1) {
+        int directions[4][2] = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
+        for (int i = 0; i < 4; i++) {
+            int newRow = lastHitRow + directions[i][0];
+            int newCol = lastHitCol + directions[i][1];
+            if (newRow >= 0 && newRow < GRID_SIZE && newCol >= 0 && newCol < GRID_SIZE &&
+                opponent->grid[newRow][newCol] == '*') {
+                BotFire(opponent, newRow, newCol);
+                lastHitRow = newRow;
+                lastHitCol = newCol;
+                return;
+            }
+        }
+    }
+    botEasy(bot, opponent);
+}
+
+// Bot: Hard level
+void botHard(Player *bot, Player *opponent) {
+    int maxProb = 0, targetRow = 0, targetCol = 0;
+    for (int row = 0; row < GRID_SIZE; row++) {
+        for (int col = 0; col < GRID_SIZE; col++) {
+            if (opponent->grid[row][col] == '~') {
+                int prob = 0;
+                for (int d = 1; d <= 5; d++) {
+                    if (row + d < GRID_SIZE && (opponent->grid[row + d][col] == 'C'  || opponent->grid[row + d][col] == 'D' || opponent->grid[row + d][col] == 'B' || opponent->grid[row + d][col] == 'S' )) prob++;
+                    if (col + d < GRID_SIZE && (opponent->grid[row + d][col] == 'C'  || opponent->grid[row + d][col] == 'D' || opponent->grid[row + d][col] == 'B' || opponent->grid[row + d][col] == 'S' )) prob++;
+                }
+                // printf("%d",prob);
+                // printf("\n");
+                if (prob > maxProb) {
+                    maxProb = prob;
+                    targetRow = row;
+                    targetCol = col;
+                }
+            }
+        }
+    }
+    BotFire(opponent, targetRow, targetCol);
 }
