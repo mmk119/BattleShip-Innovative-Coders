@@ -27,14 +27,15 @@ typedef struct {
     int nextTurnHasArtillery;
     int hasUsedArtilleryThisTurn;
     int nextTurnHasTorpedo;// New field for torpedo availability
+    int isBot;
 } Player;
 char smoke_grid[GRID_SIZE][GRID_SIZE];   // rama : Auxiliary grid to mark smoke-covered cells
 
 // Function prototypes
 void initializeGrid(Player *player);
 void displayGrid(Player *player, Player *opponent, int revealShips, int trackMisses, int difficultyLevel);
-int placeShip(Player *player, int shipIndex, char *coordinate, char orientation);
-int isValidPlacement(Player *player, int shipIndex, int row, int col, char orientation);
+int placeShip(Player *player, int shipIndex, char *coordinate, char orientation, int isBot);
+int isValidPlacement(Player *player, int shipIndex, int row, int col, char orientation,int isBot);
 void fire(Player *attacker, Player *defender, char *coordinate);
 void radarSweep(Player *player, char *coordinate, Player *opponent);
 void SmokeScreen(Player *player, char *coordinate, Player *opponent);
@@ -47,14 +48,15 @@ void delay(int seconds);
 void activate_smoke_screen(int x, int y); // rama 
 void toLowerCase(char *str);
 void toUpperCase(char *str);
-
+void generateRandomPlacement(char *coordinate, char *orientation);
+void placeShipsRandomly(Player *currentPlayer);
 
 int main() {
     Player player1, player2;
     int turn = getRandomPlayer();
     char command[50];
     int difficultyLevel;
-
+    int choice;
     player1.radarSweeps = 0;
     player2.radarSweeps = 0;
     player1.nextTurnHasTorpedo = 0;  // Initialize torpedo availability
@@ -72,145 +74,282 @@ int main() {
             break;
         }
     } 
-    // Get player names
-    printf("Enter name for Player 1: ");
-    fgets(player1.name, MAX_NAME_LENGTH, stdin);
-    player1.name[strcspn(player1.name, "\n")] = 0;
-    printf("Enter name for Player 2: ");
-    fgets(player2.name, MAX_NAME_LENGTH, stdin);
-    player2.name[strcspn(player2.name, "\n")] = 0;
-
-    // Define ships
-    Ship ships[MAX_SHIPS] = {
-        {"Carrier", 5, 0, 0},
-        {"Battleship", 4, 0, 0},
-        {"Destroyer", 3, 0, 0},
-        {"Submarine", 2, 0, 0}
-    };
-
-    for (int i = 0; i < MAX_SHIPS; i++) {
-        player1.ships[i] = ships[i];
-        player2.ships[i] = ships[i];
-    }
-
-    // Initialize grids
-    initializeGrid(&player1);
-    initializeGrid(&player2);
-
-    printf("%s goes first!\n", (turn == 0) ? player1.name : player2.name);
-
-    // Ship placement for Player 1
-    Player *currentPlayer = (turn == 0) ? &player1 : &player2; //chosing whos the current player
-    printf("%s, place your ships:\n", currentPlayer->name);
-    for (int i = 0; i < MAX_SHIPS; i++) {
-        char orientation;
-        char coordinate[4];
-        displayGrid((turn == 0) ? &player2 : &player1, currentPlayer, 1, 1,difficultyLevel);
-        if (currentPlayer->ships[i].size != 0) { 
-            do {
-                printf("Place %s (size %d): Enter coordinate (e.g., B3) and orientation (h/v): ", 
-                        currentPlayer->ships[i].name, currentPlayer->ships[i].size);
-                scanf("%s %c", coordinate, &orientation);
-                toLowerCase(&orientation);
-                toUpperCase(coordinate);
-                printf(coordinate);
-                if (orientation != 'h' && orientation != 'v') {
-                    printf("Invalid orientation. Please enter 'h' for horizontal or 'v' for vertical.\n");
-                }
-            } while (orientation != 'h' && orientation != 'v');  
-
-            if (placeShip(currentPlayer, i, coordinate, orientation) == 0) {
-                i--; 
-            }
-            clearScreen();
+    while(1){
+        printf("Press 1 for single player or 2 for multiplayers: ");
+        
+        scanf("%d", &choice);
+        getchar(); 
+        if((choice != 1) && (choice != 2)){
+             printf("Invalid Input Please choose a correct value \n");
         }
-    }
-
-    clearScreen();
-
-// Ship placement for Player 2
-    currentPlayer = (turn == 1) ? &player1 : &player2; 
-    printf("%s, place your ships:\n", currentPlayer->name);
-    for (int i = 0; i < MAX_SHIPS; i++) {
-        char orientation;
-        char coordinate[4];
-        displayGrid((turn == 1) ? &player1 : &player2, currentPlayer, 1, 1,difficultyLevel); 
-        if (currentPlayer->ships[i].size != 0) {
-            do {
-                printf("Place %s (size %d): Enter coordinate (e.g., B3) and orientation (h/v): ", currentPlayer->ships[i].name, currentPlayer->ships[i].size);
-                scanf("%s %c", coordinate, &orientation);
-                toLowerCase(&orientation);
-                toUpperCase(coordinate);
-                if (orientation != 'h' && orientation != 'v') {
-                    printf("Invalid orientation. Please enter 'h' for horizontal or 'v' for vertical.\n");
-                }
-            } while (orientation != 'h' && orientation != 'v');
-
-            if (placeShip(currentPlayer, i, coordinate, orientation) == 0) {
-                i--;
-            }
-            clearScreen();
-        }
-    }
-
-    clearScreen();
-
-        // After ship placement and before the while loop
-        int c;
-        while ((c = getchar()) != '\n' && c != EOF) {}
-    int first = 0;
-    // Gameplay loop
-    while (1) {
-        Player *attackingPlayer = (turn % 2 == 0) ? &player1 : &player2;
-        Player *defendingPlayer = (turn % 2 == 0) ? &player2 : &player1;
-        if (first >= 1){
-            displayGrid(defendingPlayer, attackingPlayer, 0, difficultyLevel == 1,difficultyLevel);
-        }
-        //displayGrid(defendingPlayer, attackingPlayer, 0, difficultyLevel == 1,difficultyLevel);
-        printf("%s's turn. Enter command (Fire or Radar or Smoke Screen or Artillery or Torpedo)[coordinate]: ", attackingPlayer->name);
-        fgets(command, sizeof(command), stdin);
-        command[strcspn(command, "\n")] = 0;
-
-        if ( (strncmp(command, "Fire", 4) == 0)  || (strncmp(command, "fire", 4) == 0)) {
-            fire(attackingPlayer, defendingPlayer, command + 5);
-            checkSunkShips(attackingPlayer, defendingPlayer);
-        } else if ( (strncmp(command, "Radar", 5) == 0)  || (strncmp(command, "radar", 5) == 0) ){
-            radarSweep(attackingPlayer, command + 6, defendingPlayer);
-        } else if ( (strncmp(command, "Smoke Screen", 12) == 0) || (strncmp(command, "smoke screen", 12) == 0) ){
-            SmokeScreen(attackingPlayer, command + 13, defendingPlayer);
-        } else if ( (strncmp(command, "Artillery", 9) == 0) || (strncmp(command, "artillery", 9) == 0) ) {
-            artillery(attackingPlayer, defendingPlayer, command + 10);
-        } else if ( (strncmp(command, "Torpedo", 7) == 0) || (strncmp(command, "torpedo", 7) == 0) ) {
-            if (attackingPlayer->nextTurnHasTorpedo) {
-                torpedo(attackingPlayer, defendingPlayer, command + 8);
-                attackingPlayer->nextTurnHasTorpedo = 0; // Reset torpedo availability
-            } else {
-                printf("Torpedo not available.\n");
-            }
-        } else {
-            printf("Invalid command.\n");
-            continue;
-        }
-        first +=1;
-        // Check for game over
-        int allShipsSunk = 1;
-        for (int i = 0; i < MAX_SHIPS; i++) {
-            if (defendingPlayer->ships[i].hits < defendingPlayer->ships[i].size) {
-                allShipsSunk = 0;
-                break;
-            }
-        }
-
-        if (allShipsSunk) {
-            printf("%s wins!\n", attackingPlayer->name);
+          else{
             break;
         }
-
-        turn++;
-        
     }
+    if (choice == 2){
+        // Get player names
+        printf("Enter name for Player 1: ");
+        fgets(player1.name, MAX_NAME_LENGTH, stdin);
+        player1.name[strcspn(player1.name, "\n")] = 0;
+        player1.isBot = 0;
+        printf("Enter name for Player 2: ");
+        fgets(player2.name, MAX_NAME_LENGTH, stdin);
+        player2.name[strcspn(player2.name, "\n")] = 0;
+        player2.isBot = 0;
+        // Define ships
+        Ship ships[MAX_SHIPS] = {
+            {"Carrier", 5, 0, 0},
+            {"Battleship", 4, 0, 0},
+            {"Destroyer", 3, 0, 0},
+            {"Submarine", 2, 0, 0}
+        };
 
-    return 0;
+        for (int i = 0; i < MAX_SHIPS; i++) {
+            player1.ships[i] = ships[i];
+            player2.ships[i] = ships[i];
+        }
+
+        // Initialize grids
+        initializeGrid(&player1);
+        initializeGrid(&player2);
+
+        printf("%s goes first!\n", (turn == 0) ? player1.name : player2.name);
+
+        // Ship placement for Player 1
+        Player *currentPlayer = (turn == 0) ? &player1 : &player2; //chosing whos the current player
+        printf("%s, place your ships:\n", currentPlayer->name);
+        for (int i = 0; i < MAX_SHIPS; i++) {
+            char orientation;
+            char coordinate[4];
+            displayGrid((turn == 0) ? &player2 : &player1, currentPlayer, 1, 1,difficultyLevel);
+            if (currentPlayer->ships[i].size != 0) { 
+                do {
+                    printf("Place %s (size %d): Enter coordinate (e.g., B3) and orientation (h/v): ", 
+                            currentPlayer->ships[i].name, currentPlayer->ships[i].size);
+                    scanf("%s %c", coordinate, &orientation);
+                    toLowerCase(&orientation);
+                    toUpperCase(coordinate);
+                    printf(coordinate);
+                    if (orientation != 'h' && orientation != 'v') {
+                        printf("Invalid orientation. Please enter 'h' for horizontal or 'v' for vertical.\n");
+                    }
+                } while (orientation != 'h' && orientation != 'v');  
+
+                if (placeShip(currentPlayer, i, coordinate, orientation,0) == 0) {
+                    i--; 
+                }
+                clearScreen();
+            }
+        }
+
+        clearScreen();
+
+        // Ship placement for bot
+        currentPlayer = (turn == 1) ? &player1 : &player2; 
+        printf("%s, place your ships:\n", currentPlayer->name);
+        for (int i = 0; i < MAX_SHIPS; i++) {
+            char orientation;
+            char coordinate[4];
+            displayGrid((turn == 1) ? &player1 : &player2, currentPlayer, 1, 1,difficultyLevel); 
+            if (currentPlayer->ships[i].size != 0) {
+                do {
+                    printf("Place %s (size %d): Enter coordinate (e.g., B3) and orientation (h/v): ", currentPlayer->ships[i].name, currentPlayer->ships[i].size);
+                    scanf("%s %c", coordinate, &orientation);
+                    toLowerCase(&orientation);
+                    toUpperCase(coordinate);
+                    if (orientation != 'h' && orientation != 'v') {
+                        printf("Invalid orientation. Please enter 'h' for horizontal or 'v' for vertical.\n");
+                    }
+                } while (orientation != 'h' && orientation != 'v');
+
+                if (placeShip(currentPlayer, i, coordinate, orientation,0) == 0) {
+                    i--;
+                }
+                clearScreen();
+            }
+        }
+
+        clearScreen();
+
+            // After ship placement and before the while loop
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF) {}
+        int first = 0;
+        // Gameplay loop
+        while (1) {
+            Player *attackingPlayer = (turn % 2 == 0) ? &player1 : &player2;
+            Player *defendingPlayer = (turn % 2 == 0) ? &player2 : &player1;
+            if (first >= 1){
+                displayGrid(defendingPlayer, attackingPlayer, 0, difficultyLevel == 1,difficultyLevel);
+            }
+           
+            printf("%s's turn. Enter command (Fire or Radar or Smoke Screen or Artillery or Torpedo)[coordinate]: ", attackingPlayer->name);
+            fgets(command, sizeof(command), stdin);
+            command[strcspn(command, "\n")] = 0;
+
+            if ( (strncmp(command, "Fire", 4) == 0)  || (strncmp(command, "fire", 4) == 0)) {
+                fire(attackingPlayer, defendingPlayer, command + 5);
+                checkSunkShips(attackingPlayer, defendingPlayer);
+            } else if ( (strncmp(command, "Radar", 5) == 0)  || (strncmp(command, "radar", 5) == 0) ){
+                radarSweep(attackingPlayer, command + 6, defendingPlayer);
+            } else if ( (strncmp(command, "Smoke Screen", 12) == 0) || (strncmp(command, "smoke screen", 12) == 0) ){
+                SmokeScreen(attackingPlayer, command + 13, defendingPlayer);
+            } else if ( (strncmp(command, "Artillery", 9) == 0) || (strncmp(command, "artillery", 9) == 0) ) {
+                artillery(attackingPlayer, defendingPlayer, command + 10);
+            } else if ( (strncmp(command, "Torpedo", 7) == 0) || (strncmp(command, "torpedo", 7) == 0) ) {
+                if (attackingPlayer->nextTurnHasTorpedo) {
+                    torpedo(attackingPlayer, defendingPlayer, command + 8);
+                    attackingPlayer->nextTurnHasTorpedo = 0; // Reset torpedo availability
+                } else {
+                    printf("Torpedo not available.\n");
+                }
+            } else {
+                printf("Invalid command.\n");
+                continue;
+            }
+            first +=1;
+            // Check for game over
+            int allShipsSunk = 1;
+            for (int i = 0; i < MAX_SHIPS; i++) {
+                if (defendingPlayer->ships[i].hits < defendingPlayer->ships[i].size) {
+                    allShipsSunk = 0;
+                    break;
+                }
+            }
+
+            if (allShipsSunk) {
+                printf("%s wins!\n", attackingPlayer->name);
+                break;
+            }
+
+            turn++;
+            
+        }
+
+        return 0;
+    }
+    // Single player mode with bots
+    else{
+        printf("Enter name for the player: ");
+        fgets(player1.name, MAX_NAME_LENGTH, stdin);
+        player1.name[strcspn(player1.name, "\n")] = 0;
+        player1.isBot = 0;
+
+        strcpy(player2.name, "Bot Player");
+        player2.isBot = 1;
+        // Define ships
+        Ship ships[MAX_SHIPS] = {
+            {"Carrier", 5, 0, 0},
+            {"Battleship", 4, 0, 0},
+            {"Destroyer", 3, 0, 0},
+            {"Submarine", 2, 0, 0}
+        };
+
+        for (int i = 0; i < MAX_SHIPS; i++) {
+            player1.ships[i] = ships[i];
+            player2.ships[i] = ships[i];
+        }
+
+        // Initialize grids
+        initializeGrid(&player1);
+        initializeGrid(&player2);
+
+        Player *currentPlayer = &player1; 
+        printf("%s, place your ships:\n", currentPlayer->name);
+        for (int i = 0; i < MAX_SHIPS; i++) {
+            char orientation;
+            char coordinate[4];
+            displayGrid(&player1, currentPlayer, 1, 1,difficultyLevel);
+            if (currentPlayer->ships[i].size != 0) { 
+                do {
+                    printf("Place %s (size %d): Enter coordinate (e.g., B3) and orientation (h/v): ", 
+                            currentPlayer->ships[i].name, currentPlayer->ships[i].size);
+                    scanf("%s %c", coordinate, &orientation);
+                    toLowerCase(&orientation);
+                    toUpperCase(coordinate);
+                    printf(coordinate);
+                    if (orientation != 'h' && orientation != 'v') {
+                        printf("Invalid orientation. Please enter 'h' for horizontal or 'v' for vertical.\n");
+                    }
+                } while (orientation != 'h' && orientation != 'v');  
+
+                if (placeShip(currentPlayer, i, coordinate, orientation,0) == 0) {
+                    i--; 
+                }
+                clearScreen();
+            }
+        }
+
+        clearScreen();
+        
+        // placing ships for the bot in a random way
+        placeShipsRandomly(&player2);
+        displayGrid(&player2, &player2, 1, 1,difficultyLevel);
+
+            // After ship placement and before the while loop
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF) {}
+        int first = 0;
+        // Gameplay loop
+        while (1) {
+            Player *attackingPlayer = (turn % 2 == 0) ? &player1 : &player2;
+            Player *defendingPlayer = (turn % 2 == 0) ? &player2 : &player1;
+            if (first >= 1){
+                displayGrid(defendingPlayer, attackingPlayer, 0, difficultyLevel == 1,difficultyLevel);
+            }
+            if (! attackingPlayer->isBot){
+                printf("%s's turn. Enter command (Fire or Radar or Smoke Screen or Artillery or Torpedo)[coordinate]: ", attackingPlayer->name);
+                fgets(command, sizeof(command), stdin);
+                command[strcspn(command, "\n")] = 0;
+
+                if ( (strncmp(command, "Fire", 4) == 0)  || (strncmp(command, "fire", 4) == 0)) {
+                    fire(attackingPlayer, defendingPlayer, command + 5);
+                    checkSunkShips(attackingPlayer, defendingPlayer);
+                } else if ( (strncmp(command, "Radar", 5) == 0)  || (strncmp(command, "radar", 5) == 0) ){
+                    radarSweep(attackingPlayer, command + 6, defendingPlayer);
+                } else if ( (strncmp(command, "Smoke Screen", 12) == 0) || (strncmp(command, "smoke screen", 12) == 0) ){
+                    SmokeScreen(attackingPlayer, command + 13, defendingPlayer);
+                } else if ( (strncmp(command, "Artillery", 9) == 0) || (strncmp(command, "artillery", 9) == 0) ) {
+                    artillery(attackingPlayer, defendingPlayer, command + 10);
+                } else if ( (strncmp(command, "Torpedo", 7) == 0) || (strncmp(command, "torpedo", 7) == 0) ) {
+                    if (attackingPlayer->nextTurnHasTorpedo) {
+                        torpedo(attackingPlayer, defendingPlayer, command + 8);
+                        attackingPlayer->nextTurnHasTorpedo = 0; // Reset torpedo availability
+                    } else {
+                        printf("Torpedo not available.\n");
+                    }
+                } else {
+                    printf("Invalid command.\n");
+                    continue;
+                }
+            }
+            else{
+                printf("Bot turn \n");
+
+                // logic for bot play go here
+            }
+            first +=1;
+            // Check for game over
+            int allShipsSunk = 1;
+            for (int i = 0; i < MAX_SHIPS; i++) {
+                if (defendingPlayer->ships[i].hits < defendingPlayer->ships[i].size) {
+                    allShipsSunk = 0;
+                    break;
+                }
+            }
+
+            if (allShipsSunk) {
+                printf("%s wins!\n", attackingPlayer->name);
+                break;
+            }
+
+            turn++;
+            
+        }
+
+        return 0;
+        
+    }   
 }
 
 void initializeGrid(Player *player) {
@@ -239,7 +378,7 @@ void displayGrid(Player *player, Player *opponent, int revealShips, int trackMis
         printf("\n");
     }
 }
-int placeShip(Player *player, int shipIndex, char *coordinate, char orientation) {
+int placeShip(Player *player, int shipIndex, char *coordinate, char orientation, int isBot) {
     toUpperCase(coordinate);
     toLowerCase(&orientation);
     int row, col;
@@ -255,13 +394,16 @@ int placeShip(Player *player, int shipIndex, char *coordinate, char orientation)
 
     // Check for out-of-bounds
     if (row < 0 || row >= GRID_SIZE || col < 0 || col >= GRID_SIZE) {
-        printf("Invalid coordinates: out of bounds. Try again.\n");
-        delay(1);
+        if (isBot != 1){
+            printf("Invalid coordinates: out of bounds. Try again.\n");
+            delay(1);
+            
+        }
         return 0;
     }
 
     // Check if the placement is valid
-    if (isValidPlacement(player, shipIndex, row, col, orientation)) {
+    if (isValidPlacement(player, shipIndex, row, col, orientation, isBot)) {
         for (int i = 0; i < player->ships[shipIndex].size; i++) {
             player->grid[row][col] = player->ships[shipIndex].name[0]; 
             if (orientation == 'h') {
@@ -273,43 +415,60 @@ int placeShip(Player *player, int shipIndex, char *coordinate, char orientation)
         player->ships[shipIndex].placed = 1;
         return 1;
     } else {
-        printf("Invalid placement. Please enter a new coordinate (e.g., B3) and orientation (h/v): ");
-        delay(1);
+        if (isBot != 1){
+            printf("Invalid placement. Please enter a new coordinate (e.g., B3) and orientation (h/v): ");
+            delay(1);
+        }
         return 0;
     }
 }
 
-int isValidPlacement(Player *player, int shipIndex, int row, int col, char orientation) {
+int isValidPlacement(Player *player, int shipIndex, int row, int col, char orientation, int isBot) {
     toLowerCase(&orientation);
     if (row < 0 || col < 0 || row >= GRID_SIZE || col >= GRID_SIZE) {
-        printf("Placement out of bounds. Try again.\n");
-        delay(1);
-        return 0;
+        if (isBot != 1){
+            printf("Placement out of bounds. Try again.\n");
+            delay(1);
+           
+        }
+         return 0;
     }
 
     if (orientation == 'h') {
         if (col + player->ships[shipIndex].size > GRID_SIZE) {
-            printf("Ship extends beyond the grid horizontally. Try again.\n");
-            delay(1);
-            return 0; 
+            if (isBot != 1){
+                printf("Ship extends beyond the grid horizontally. Try again.\n");
+                delay(1);
+            
+            }
+                return 0; 
         }
         for (int i = 0; i < player->ships[shipIndex].size; i++) {
             if (player->grid[row][col + i] != '~') {
-                printf("Overlap with another ship detected. Try again.\n");
-                delay(1);
+                if (isBot != 1){
+                    printf("Overlap with another ship detected. Try again.\n");
+                    delay(1);
+                    
+                }
                 return 0;
             }
         }
     } else { 
         if (row + player->ships[shipIndex].size > GRID_SIZE) {
-            printf("Ship extends beyond the grid vertically. Try again.\n");
-            delay(1);
-            return 0;
+            if (isBot != 1){
+                printf("Ship extends beyond the grid vertically. Try again.\n");
+                delay(1);
+               
+            }
+             return 0;
         }
         for (int i = 0; i < player->ships[shipIndex].size; i++) {
             if (player->grid[row + i][col] != '~') {
-                printf(" Overlap with another ship detected. Try again.\n");
-                delay(1);
+                if (isBot != 1){
+                    printf(" Overlap with another ship detected. Try again.\n");
+                    delay(1);
+                    
+                }
                 return 0;
             }
         }
@@ -636,5 +795,35 @@ void toUpperCase(char *str) {
             *temp -= ('a' - 'A'); 
         }
         temp++; 
+    }
+}
+
+void generateRandomPlacement(char *coordinate, char *orientation) {
+
+    *orientation = (rand() % 2 == 0) ? 'h' : 'v';
+    coordinate[0] = 'A' + (rand() % GRID_SIZE);
+    int column = rand() % GRID_SIZE + 1;
+    sprintf(&coordinate[1], "%d", column); 
+    coordinate[3] = '\0'; 
+}
+
+
+void placeShipsRandomly(Player *currentPlayer) {
+    printf("%s, placing ships randomly...\n", currentPlayer->name);
+    for (int i = 0; i < MAX_SHIPS; i++) {
+        char orientation;
+        char coordinate[4];
+
+        if (currentPlayer->ships[i].size != 0) {
+            do {
+                
+                generateRandomPlacement(coordinate, &orientation);
+                
+                if (placeShip(currentPlayer, i, coordinate, orientation,1) == 0) {
+                      i--; 
+                    continue;
+                }
+            } while (0); 
+        }
     }
 }
