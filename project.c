@@ -446,7 +446,7 @@ int isValidPlacement(Player *player, int shipIndex, int row, int col, char orien
         for (int i = 0; i < player->ships[shipIndex].size; i++) {
             if (player->grid[row][col + i] != '~') {
                 if (isBot != 1){
-                    printf("Overlap with another ship detected. Try again.\n");
+                    printf(" Overlap with another ship detected. Try again.\n");
                     delay(1);
                     
                 }
