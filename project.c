@@ -884,7 +884,7 @@ void botMedium(Player *bot, Player *opponent) {
             int newRow = lastHitRow + directions[i][0];
             int newCol = lastHitCol + directions[i][1];
             if (newRow >= 0 && newRow < GRID_SIZE && newCol >= 0 && newCol < GRID_SIZE &&
-                opponent->grid[newRow][newCol] == '*') {
+                (opponent->grid[newRow ][newCol] != '*'  && opponent->grid[newRow][newCol] != 'o') ) {
                 BotFire(opponent, newRow, newCol);
                 lastHitRow = newRow;
                 lastHitCol = newCol;
@@ -893,6 +893,20 @@ void botMedium(Player *bot, Player *opponent) {
         }
     }
     botEasy(bot, opponent);
+
+    for (int row = 0; row < GRID_SIZE; row++) {
+        for (int col = 0; col < GRID_SIZE; col++) {
+            if (opponent->grid[row][col] == '*') {
+                lastHitRow = row;
+                lastHitCol = col;
+                return;
+            }
+        }
+    }
+
+    // Reset to -1 if no hits exist
+    lastHitRow = -1;
+    lastHitCol = -1;
 }
 
 // Bot: Hard level
