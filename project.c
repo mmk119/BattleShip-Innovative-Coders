@@ -356,7 +356,7 @@ int main() {
                     }
                 
                 displayGrid(attackingPlayer, defendingPlayer , 0, difficultyLevel == 1,difficultyLevel);
-                    
+                checkSunkShips(attackingPlayer, defendingPlayer);     
             }
     
             // Check for game over
