@@ -954,7 +954,12 @@ void botHard(Player *bot, Player *opponent) {
 
     for (int row = 0; row < GRID_SIZE; row++) {
         for (int col = 0; col < GRID_SIZE; col++) {
-            printf("hit** \n");
+            if (opponent->grid[row][col] != '~' && opponent->grid[row][col] != 'o' && opponent->grid[row][col] != '*') {
+                  targetRow = row;
+                  targetCol = col;
+                  BotFire(opponent, targetRow, targetCol);
+                  return;
+            }
             if (opponent->grid[row][col] == '~') { 
                 int prob = 0;
 
@@ -967,6 +972,7 @@ void botHard(Player *bot, Player *opponent) {
                         int validHoriz = 1;
                         for (int k = 0; k < size; k++) {
                             if (opponent->grid[row][col + k] == shipChars[s]) {
+                                //printf("hor** \n");
                                 prob++;
                             }
                         }
@@ -978,6 +984,7 @@ void botHard(Player *bot, Player *opponent) {
                         int validVert = 1;
                         for (int k = 0; k < size; k++) {
                             if (opponent->grid[row + k][col] == shipChars[s]) {
+                               // printf("ver** \n");
                                 prob++;
                             }
                         }
@@ -986,7 +993,7 @@ void botHard(Player *bot, Player *opponent) {
                 }
 
 
-                if (prob > maxProb) {
+                if (prob > maxProb   &&  opponent->grid[row][col] == '~') {
                     maxProb = prob;
                     targetRow = row;
                     targetCol = col;
@@ -1001,7 +1008,7 @@ void botHard(Player *bot, Player *opponent) {
             targetCol = rand() % GRID_SIZE;
         } while (opponent->grid[targetRow][targetCol] != '~');
     }
-
+    
     // Fire at the calculated target
     BotFire(opponent, targetRow, targetCol);
 }
