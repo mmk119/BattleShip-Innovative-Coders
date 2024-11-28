@@ -95,10 +95,10 @@ int main() {
         input[strcspn(input, "\n")] = 0;
 
         char *endptr;
-        difficultyLevel = strtol(input, &endptr, 10); // Convert to integer
+        choice = strtol(input, &endptr, 10); // Convert to integer
 
        
-        if (*endptr != '\0' || difficultyLevel < 1 || difficultyLevel > 2) {
+        if (*endptr != '\0' || choice < 1 || choice > 2) {
             printf("Invalid Input. Please choose a correct value (1, or 2).\n");
         } else {
             break;
@@ -345,7 +345,7 @@ int main() {
             }
             else{
                 printf("Bot turn \n");
-
+              
                 // logic for bot play go here
                 switch (difficultyLevel) {
                         case 1: botEasy(&player2, &player1); break;
@@ -881,6 +881,7 @@ void BotFire( Player *defender, int row, int col) {
 
 // Bot: Easy level
 void botEasy(Player *bot, Player *opponent) {
+    
     int row, col;
     do {
         row = rand() % GRID_SIZE;
@@ -891,6 +892,7 @@ void botEasy(Player *bot, Player *opponent) {
 
 // Bot: Medium level
 void botMedium(Player *bot, Player *opponent) {
+   
     // Medium bot attacks intelligently based on previous hits
     static int lastHitRow = -1, lastHitCol = -1;
     if (lastHitRow != -1 && lastHitCol != -1) {
@@ -924,19 +926,66 @@ void botMedium(Player *bot, Player *opponent) {
     lastHitCol = -1;
 }
 
-// Bot: Hard level
 void botHard(Player *bot, Player *opponent) {
-    int maxProb = 0, targetRow = 0, targetCol = 0;
+    int maxProb = 0, targetRow = -1, targetCol = -1;
+    char shipChars[] = {'C', 'B', 'D', 'S'}; 
+    int shipSizes[] = {5, 4, 3, 2};          
+    int numShips = 4;
+
+  
     for (int row = 0; row < GRID_SIZE; row++) {
         for (int col = 0; col < GRID_SIZE; col++) {
-            if (opponent->grid[row][col] == '~') {
-                int prob = 0;
-                for (int d = 1; d <= 5; d++) {
-                    if (row + d < GRID_SIZE && (opponent->grid[row + d][col] == 'C'  || opponent->grid[row + d][col] == 'D' || opponent->grid[row + d][col] == 'B' || opponent->grid[row + d][col] == 'S' )) prob++;
-                    if (col + d < GRID_SIZE && (opponent->grid[row + d][col] == 'C'  || opponent->grid[row + d][col] == 'D' || opponent->grid[row + d][col] == 'B' || opponent->grid[row + d][col] == 'S' )) prob++;
+            if (opponent->grid[row][col] == '*') { 
+                int directions[4][2] = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
+                for (int d = 0; d < 4; d++) {
+                    int newRow = row + directions[d][0];
+                    int newCol = col + directions[d][1];
+                    if (newRow >= 0 && newRow < GRID_SIZE &&
+                        newCol >= 0 && newCol < GRID_SIZE &&
+                        opponent->grid[newRow][newCol] == '~') {
+                        BotFire(opponent, newRow, newCol);
+                        return; 
+                    }
                 }
-                // printf("%d",prob);
-                // printf("\n");
+            }
+        }
+    }
+
+
+    for (int row = 0; row < GRID_SIZE; row++) {
+        for (int col = 0; col < GRID_SIZE; col++) {
+            printf("hit** \n");
+            if (opponent->grid[row][col] == '~') { 
+                int prob = 0;
+
+           
+                for (int s = 0; s < numShips; s++) {
+                    int size = shipSizes[s];
+
+                    // Check horizontal placement
+                    if (col + size <= GRID_SIZE) {
+                        int validHoriz = 1;
+                        for (int k = 0; k < size; k++) {
+                            if (opponent->grid[row][col + k] == shipChars[s]) {
+                                prob++;
+                            }
+                        }
+                    
+                    }
+
+                    // Check vertical placement
+                    if (row + size <= GRID_SIZE) {
+                        int validVert = 1;
+                        for (int k = 0; k < size; k++) {
+                            if (opponent->grid[row + k][col] == shipChars[s]) {
+                                prob++;
+                            }
+                        }
+        
+                    }
+                }
+
+
                 if (prob > maxProb) {
                     maxProb = prob;
                     targetRow = row;
@@ -945,5 +994,14 @@ void botHard(Player *bot, Player *opponent) {
             }
         }
     }
+
+    if (targetRow == -1 || targetCol == -1) {
+        do {
+            targetRow = rand() % GRID_SIZE;
+            targetCol = rand() % GRID_SIZE;
+        } while (opponent->grid[targetRow][targetCol] != '~');
+    }
+
+    // Fire at the calculated target
     BotFire(opponent, targetRow, targetCol);
 }
