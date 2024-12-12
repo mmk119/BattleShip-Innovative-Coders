@@ -9,19 +9,19 @@ This code is the battleship game written in C language, it can be player in sing
 
 
 ## Installation
-Just by downloading the Main.c file from our git channel using git clone command
+Just by downloading the project.c file from our git channel using the git clone command
 
 ## Usage
-To run the code just go the file folder and run the following command:
+To run the code just go to the file folder and run the following command:
 gcc -o exe Main.c
 and then run the following command:
 exe
-make sure first that a C compiler already installed in your machine like MinGW for example
+make sure first that a C compiler is already installed in your machine like MinGW for example
 
 ## Features
 - Single Player Mode
 - Multi-players Mode
-- Multi levels in case of single player mode
+- Multi-levels in case of single player mode
 
 ## Authors
 Innovative Coders Developers:
