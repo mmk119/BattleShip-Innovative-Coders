@@ -4,6 +4,7 @@
     #include <time.h>
     #include <ctype.h>
 
+
     #define GRID_SIZE 10
     #define MAX_SHIPS 4
     #define MAX_NAME_LENGTH 50
